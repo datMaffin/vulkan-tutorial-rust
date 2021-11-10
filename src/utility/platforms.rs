@@ -5,7 +5,7 @@ use ash::vk;
 #[cfg(target_os = "windows")]
 use ash::extensions::khr::Win32Surface;
 #[cfg(all(unix, not(target_os = "android"), not(target_os = "macos")))]
-use ash::extensions::khr::XlibSurface;
+use ash::extensions::khr::{WaylandSurface, XlibSurface};
 #[cfg(target_os = "macos")]
 use ash::extensions::mvk::MacOSSurface;
 
@@ -45,6 +45,7 @@ pub fn required_extension_names() -> Vec<*const i8> {
     vec![
         Surface::name().as_ptr(),
         XlibSurface::name().as_ptr(),
+        WaylandSurface::name().as_ptr(),
         DebugUtils::name().as_ptr(),
     ]
 }
@@ -60,17 +61,30 @@ pub unsafe fn create_surface<E: EntryV1_0, I: InstanceV1_0>(
     use std::ptr;
     use winit::platform::unix::WindowExtUnix;
 
-    let x11_display = window.xlib_display().unwrap();
-    let x11_window = window.xlib_window().unwrap();
-    let x11_create_info = vk::XlibSurfaceCreateInfoKHR {
-        s_type: vk::StructureType::XLIB_SURFACE_CREATE_INFO_KHR,
-        p_next: ptr::null(),
-        flags: Default::default(),
-        window: x11_window as vk::Window,
-        dpy: x11_display as *mut vk::Display,
-    };
-    let xlib_surface_loader = XlibSurface::new(entry, instance);
-    xlib_surface_loader.create_xlib_surface(&x11_create_info, None)
+    if let Some(x11_display) = window.xlib_display() {
+        let x11_window = window.xlib_window().unwrap();
+        let x11_create_info = vk::XlibSurfaceCreateInfoKHR {
+            s_type: vk::StructureType::XLIB_SURFACE_CREATE_INFO_KHR,
+            p_next: ptr::null(),
+            flags: Default::default(),
+            window: x11_window as vk::Window,
+            dpy: x11_display as *mut vk::Display,
+        };
+        let xlib_surface_loader = XlibSurface::new(entry, instance);
+        xlib_surface_loader.create_xlib_surface(&x11_create_info, None)
+    } else {
+        let wl_display = window.wayland_display().unwrap();
+        let wl_surface = window.wayland_surface().unwrap();
+        let wl_create_info = vk::WaylandSurfaceCreateInfoKHR {
+            s_type: vk::StructureType::WAYLAND_SURFACE_CREATE_INFO_KHR,
+            p_next: ptr::null(),
+            flags: Default::default(),
+            surface: wl_surface,
+            display: wl_display,
+        };
+        let wl_surface_loader = WaylandSurface::new(entry, instance);
+        wl_surface_loader.create_wayland_surface(&wl_create_info, None)
+    }
 }
 
 #[cfg(target_os = "macos")]

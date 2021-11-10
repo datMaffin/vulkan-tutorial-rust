@@ -6,7 +6,7 @@ edition = "2018"
 authors = ["unknownue <usami-ssc@protonmail.com>"]
 
 [dependencies]
-winit     = "0.20.0"
+winit     = "0.25.0"
 ash       = "0.29.0"
 num       = "0.2"
 cgmath    = "0.17.0"
